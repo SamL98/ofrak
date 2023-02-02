@@ -54,7 +54,7 @@ class LLVM_12_0_1_Toolchain(Toolchain):
         )
 
         if self._config.separate_data_sections:
-            raise NotImplementedError("separate sections not supported by LLVM Toolchain yet")
+            self._compiler_flags.append("-fdata-sections")
         if self._config.compiler_cpu:
             self._compiler_flags.append(f"-mcpu={self._config.compiler_cpu}")
 
@@ -110,6 +110,17 @@ class LLVM_12_0_1_Toolchain(Toolchain):
         )
         if not self._config.check_overlap:
             self._linker_flags.append("--no-check-sections")
+
+    def keep_section(self, section_name: str):
+        if section_name in self._linker_keep_list:
+            return True
+        if self._config.separate_data_sections:
+            for keep_section in self._linker_keep_list:
+                if section_name.startswith(keep_section):
+                    return True
+            return False
+        else:
+            return False
 
     @property
     def name(self) -> str:
@@ -233,7 +244,7 @@ class LLVM_12_0_1_Toolchain(Toolchain):
         abs_path = os.path.abspath(object_path)
         return (
             f"    .rbs_{stripped_obj_name}_{stripped_seg_name} : {{\n"
-            f"        {abs_path}({segment_name})\n"
+            f"        {abs_path}({segment_name}*)\n"
             f"    }} > {memory_region_name}"
         )
 
